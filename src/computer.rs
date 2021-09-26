@@ -97,9 +97,9 @@ pub fn pull_signal_length() -> Option<NonZeroUsize> {
 ///
 /// The `buffer` parameter identifies where to store the signal data.
 ///
-/// If there is a signal pending, the signal data is written to `buffer` as a CBOR-encoded sequence
-/// containing the name followed by any additional signal parameters, a slice referring to it is
-/// returned, and the signal is removed from the queue. If not, `None` is returned.
+/// If there is a signal pending, the signal data is written to `buffer` as a CBOR array containing
+/// the name followed by any additional signal parameters, a slice referring to it is returned, and
+/// the signal is removed from the queue. If not, `None` is returned.
 ///
 /// # Errors
 /// * [`BufferTooShort`](Error::BufferTooShort) is returned if `buffer` is not large enough to hold
