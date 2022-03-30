@@ -102,7 +102,7 @@ pub struct ListEntry<'listing, 'lister> {
 	listing: PhantomData<&'listing mut Listing<'lister>>,
 }
 
-impl<'listing, 'lister> ListEntry<'listing, 'lister> {
+impl ListEntry<'_, '_> {
 	/// Returns the address of the component.
 	#[must_use = "This function is only useful for its return value"]
 	pub fn address(&self) -> &Address {
@@ -308,7 +308,7 @@ impl From<u32> for MethodAttributes {
 #[must_use = "Starting a method listing is only useful if you read the results."]
 pub struct MethodListing<'lister>(PhantomData<&'lister mut MethodLister>);
 
-impl<'lister> MethodListing<'lister> {
+impl MethodListing<'_> {
 	/// Returns the length, in bytes, of the name of the next method in the list of methods.
 	///
 	/// If there is no next entry, `None` is returned.

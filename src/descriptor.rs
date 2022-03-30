@@ -165,7 +165,7 @@ impl Encode for Owned {
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Borrowed<'a>(NonZeroU32, PhantomData<&'a NonZeroU32>);
 
-impl<'a> Borrowed<'a> {
+impl Borrowed<'_> {
 	/// Returns the raw descriptor value.
 	#[must_use = "This function is only useful for its return value"]
 	pub const fn as_raw(self) -> u32 {
@@ -173,25 +173,25 @@ impl<'a> Borrowed<'a> {
 	}
 }
 
-impl<'a> AsRaw for Borrowed<'a> {
+impl AsRaw for Borrowed<'_> {
 	fn as_raw(&self) -> u32 {
 		self.0.get() - 1
 	}
 }
 
-impl<'a> AsDescriptor for Borrowed<'a> {
+impl AsDescriptor for Borrowed<'_> {
 	fn as_descriptor(&self) -> Borrowed<'_> {
 		*self
 	}
 }
 
-impl<'a> Debug for Borrowed<'a> {
+impl Debug for Borrowed<'_> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
 		self.as_raw().fmt(f)
 	}
 }
 
-impl<'a> Encode for Borrowed<'a> {
+impl Encode for Borrowed<'_> {
 	fn encode<W: Write>(
 		&self,
 		e: &mut Encoder<W>,
