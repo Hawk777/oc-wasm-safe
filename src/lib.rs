@@ -154,7 +154,7 @@ macro_rules! panic_or_trap {
 #[macro_export]
 macro_rules! panic_or_trap {
 	($message: literal) => {
-		unsafe { core::arch::wasm32::unreachable() }
+		core::arch::wasm32::unreachable()
 	};
 }
 
