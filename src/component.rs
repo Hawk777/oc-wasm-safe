@@ -3,6 +3,8 @@ use super::error::{Error, Result};
 use super::helpers::{call_buffer_len, call_buffer_str, call_string};
 use super::Address;
 use crate::panic_or_trap;
+use core::convert::TryFrom;
+use core::fmt::{Display, Formatter};
 use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 use core::ptr;
@@ -729,6 +731,21 @@ impl Invoker {
 	}
 }
 
+impl core::fmt::Debug for Invoker {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		write!(f, "Invoker")
+	}
+}
+
+impl PartialEq for Invoker {
+	fn eq(&self, _: &Self) -> bool {
+		// Only one invoker can ever exist, therefore all invokers that exist are equal.
+		true
+	}
+}
+
+impl Eq for Invoker {}
+
 /// The possible results of a successful start to a method call.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum InvokeResult {
@@ -768,9 +785,10 @@ impl<'invoker> MethodCall<'invoker> {
 	#[must_use = "This function is only useful for its return value"]
 	pub fn end_length(self) -> InvokeEndLengthResult<'invoker> {
 		// SAFETY: invoke_end permits null.
-		match unsafe { call_buffer_len(sys::invoke_end) } {
+		let ret = unsafe { sys::invoke_end(ptr::null_mut(), 0) };
+		match MethodCallError::from_isize(PhantomData, ret) {
 			Ok(n) => InvokeEndLengthResult::Done(Ok((n, self))),
-			Err(Error::QueueEmpty) => InvokeEndLengthResult::Pending(self),
+			Err(MethodCallError::QueueEmpty) => InvokeEndLengthResult::Pending(self),
 			Err(e) => InvokeEndLengthResult::Done(Err(e)),
 		}
 	}
@@ -795,9 +813,10 @@ impl<'invoker> MethodCall<'invoker> {
 	pub fn end(self, buffer: &mut [u8]) -> InvokeEndResult<'invoker> {
 		// SAFETY: invoke_end permits a writeable buffer pointer/length pair and promises to always
 		// return the length of data it wrote.
-		match Error::from_isize(unsafe { sys::invoke_end(buffer.as_mut_ptr(), buffer.len()) }) {
-			Err(Error::BufferTooShort) => InvokeEndResult::BufferTooShort(self),
-			Err(Error::QueueEmpty) => InvokeEndResult::Pending(self),
+		let result = unsafe { sys::invoke_end(buffer.as_mut_ptr(), buffer.len()) };
+		match MethodCallError::from_isize(PhantomData, result) {
+			Err(MethodCallError::BufferTooShort) => InvokeEndResult::BufferTooShort(self),
+			Err(MethodCallError::QueueEmpty) => InvokeEndResult::Pending(self),
 			other => InvokeEndResult::Done(other),
 		}
 	}
@@ -810,6 +829,198 @@ impl Drop for MethodCall<'_> {
 	}
 }
 
+/// An object that is able to retrieve detailed method call error information.
+///
+/// Certain errors, when returned from a method call (and only from a method call!), are
+/// accompanied by additional detailed error information which is only available until the next
+/// method call. A value of this type uses the `'invoker` lifetime parameter to prevent additional
+/// method calls from being made until the caller has finished examining the detailed error
+/// information.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct LastException<'invoker>(PhantomData<&'invoker mut Invoker>);
+
+impl<'invoker> LastException<'invoker> {
+	/// Creates a new `LastException`.
+	fn new(_: PhantomData<&'invoker mut Invoker>) -> Self {
+		Self(PhantomData)
+	}
+
+	/// Returns the length of the human-readable message for the error.
+	///
+	/// # Panics
+	/// This function panics if the underlying syscall fails, because the only reasons it could
+	/// fail should be impossible due to the type system.
+	#[allow(clippy::unused_self)] // Not used for its value, but used for its lifetime.
+	#[must_use = "This function is only useful for its return value"]
+	pub fn message_length(&self) -> usize {
+		// SAFETY: last_exception_message permits null.
+		let result = unsafe { call_buffer_len(sys::last_exception_message) };
+		result.unwrap_or_else(|_| panic_or_trap!("unreachable"))
+	}
+
+	/// Returns the human-readable message for the error.
+	///
+	/// The message is written into `buffer`, and a string slice over the written text is returned.
+	///
+	/// # Errors
+	/// * [`BufferTooShort`](Error::BufferTooShort) is returned if `buffer` is not long enough to
+	///   hold the error message.
+	///
+	/// # Panics
+	/// This function panics if the underlying syscall fails for any reason other than
+	/// [`BufferTooShort`](Error::BufferTooShort), because the only other reasons it could fail
+	/// should be impossible due to the type system.
+	#[allow(clippy::unused_self)] // Not used for its value, but used for its lifetime.
+	pub fn message<'buf>(&self, buffer: &'buf mut [u8]) -> Result<&'buf str> {
+		// SAFETY: last_exception permits a writeable buffer output pointer/length pair and
+		// promises to always write a valid UTF-8 string and return its length.
+		let result = unsafe { call_buffer_str(sys::last_exception_message, buffer) };
+		match result {
+			Ok(message) => Ok(message),
+			Err(Error::BufferTooShort) => Err(Error::BufferTooShort),
+			Err(_) => panic_or_trap!("unreachable"),
+		}
+	}
+
+	/// Checks whether the Java exception underlying the error is of a certain type.
+	///
+	/// The `class` parameter must be the fully qualified name of a Java class (e.g.
+	/// `java.io.IOException`). This function returns `true` if the exception that caused the error
+	/// is `class` or a subclass thereof, or `false` if not.
+	///
+	/// # Panics
+	/// This function panics if the underlying syscall fails, because the only reasons it could
+	/// fail should be impossible due to the type system.
+	#[allow(clippy::unused_self)] // Not used for its value, but used for its lifetime.
+	#[must_use = "This function is only useful for its return value"]
+	pub fn is_type(&self, class: &str) -> bool {
+		// SAFETY: is_type permits a string pointer/length pair.
+		let result = unsafe { call_string(sys::last_exception_is_type, Some(class)) };
+		result.unwrap_or_else(|_| panic_or_trap!("unreachable")) != 0
+	}
+}
+
+/// The possible errors that could occur during a method call.
+///
+/// Some errors carry additional information. This information is only available until the start of
+/// the next method call. The `'invoker` lifetime ensures that the invoker cannot be reused to
+/// start another method call until a value of this type is dropped and therefore the additional
+/// error information is no longer accessible.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MethodCallError<'invoker> {
+	CborDecode,
+	BufferTooShort,
+	NoSuchComponent,
+	NoSuchMethod,
+	BadParameters(LastException<'invoker>),
+	QueueFull,
+	QueueEmpty,
+	BadDescriptor,
+	TooManyDescriptors,
+	Other(LastException<'invoker>),
+	Unknown,
+}
+
+impl<'invoker> MethodCallError<'invoker> {
+	/// Checks a system call return value of type `isize` for an error value.
+	///
+	/// Returns a `Result` containing a `MethodCallError` if the value is negative, or the
+	/// original value if it was nonnegative.
+	///
+	/// # Errors
+	/// This function fails if the parameter is negative, decoding the represented error code.
+	///
+	/// # Panics
+	/// This function panics if the syscall error code is `MemoryFault` or `StringDecode`. These
+	/// syscall errors should be impossible in safe code because the type system prohibits them:
+	/// `MemoryFault` should be impossible because all memory regions are taken as slices which are
+	/// always valid, and `StringDecode` should be impossible because all strings are taken as
+	/// string-slices (`&str`) which are always valid UTF-8.
+	fn from_isize(
+		_: PhantomData<&'invoker mut Invoker>,
+		value: isize,
+	) -> core::result::Result<usize, MethodCallError<'invoker>> {
+		match value {
+			-1 => panic_or_trap!("Memory fault"), // Impossible due to memory safety
+			-2 => Err(Self::CborDecode),
+			-3 => panic_or_trap!("String decode error"), // Impossible due to type safety of &str
+			-4 => Err(Self::BufferTooShort),
+			-5 => Err(Self::NoSuchComponent),
+			-6 => Err(Self::NoSuchMethod),
+			-7 => Err(Self::BadParameters(LastException::new(PhantomData))),
+			-8 => Err(Self::QueueFull),
+			-9 => Err(Self::QueueEmpty),
+			-10 => Err(Self::BadDescriptor),
+			-11 => Err(Self::TooManyDescriptors),
+			-12 => Err(Self::Other(LastException::new(PhantomData))),
+			x if x < 0 => Err(Self::Unknown),
+			_ => {
+				// Cast from isize to usize is safe because the match arm verifies that x ≥ 0.
+				#[allow(clippy::cast_sign_loss)]
+				Ok(value as usize)
+			}
+		}
+	}
+
+	/// Returns a string describing the error.
+	#[must_use = "This function is only useful for its return value"]
+	pub fn as_str(self) -> &'static str {
+		self.simplify().as_str()
+	}
+
+	/// Throws away the additional error information.
+	#[must_use = "This function is only useful for its return value"]
+	pub fn simplify(self) -> Error {
+		match self {
+			Self::CborDecode => Error::CborDecode,
+			Self::BufferTooShort => Error::BufferTooShort,
+			Self::NoSuchComponent => Error::NoSuchComponent,
+			Self::NoSuchMethod => Error::NoSuchMethod,
+			Self::BadParameters(_) => Error::BadParameters,
+			Self::QueueFull => Error::QueueFull,
+			Self::QueueEmpty => Error::QueueEmpty,
+			Self::BadDescriptor => Error::BadDescriptor,
+			Self::TooManyDescriptors => Error::TooManyDescriptors,
+			Self::Other(_) => Error::Other,
+			Self::Unknown => Error::Unknown,
+		}
+	}
+}
+
+impl Display for MethodCallError<'_> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		self.simplify().fmt(f)
+	}
+}
+
+impl From<MethodCallError<'_>> for Error {
+	fn from(source: MethodCallError<'_>) -> Self {
+		source.simplify()
+	}
+}
+
+impl TryFrom<Error> for MethodCallError<'static> {
+	type Error = ();
+
+	fn try_from(source: Error) -> core::result::Result<Self, Self::Error> {
+		match source {
+			Error::CborDecode => Ok(Self::CborDecode),
+			Error::BufferTooShort => Ok(Self::BufferTooShort),
+			Error::NoSuchComponent => Ok(Self::NoSuchComponent),
+			Error::NoSuchMethod => Ok(Self::NoSuchMethod),
+			Error::QueueFull => Ok(Self::QueueFull),
+			Error::QueueEmpty => Ok(Self::QueueEmpty),
+			Error::BadDescriptor => Ok(Self::BadDescriptor),
+			Error::TooManyDescriptors => Ok(Self::TooManyDescriptors),
+			Error::Unknown => Ok(Self::Unknown),
+			Error::BadParameters | Error::Other => Err(()),
+		}
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for MethodCallError<'_> {}
+
 /// The result of a call to [`end_length`](MethodCall::end_length).
 ///
 /// The `'invoker` lifetime parameter is the lifetime of the method invoker that is performing the
@@ -820,7 +1031,7 @@ pub enum InvokeEndLengthResult<'invoker> {
 	/// contains both the length of the call result, in bytes, and the [`MethodCall`](MethodCall)
 	/// value that can be used to fetch the result if desired. If the method call failed, the
 	/// `Result` value contains the error.
-	Done(Result<(usize, MethodCall<'invoker>)>),
+	Done(core::result::Result<(usize, MethodCall<'invoker>), MethodCallError<'invoker>>),
 
 	/// The method call is not finished yet. The [`MethodCall`](MethodCall) value is returned so
 	/// the caller can continue to monitor progress.
@@ -836,7 +1047,7 @@ pub enum InvokeEndResult<'invoker> {
 	/// The method call is complete and the result has been fetched. If the method call completed
 	/// successfully, the `Result` value contains the CBOR-encoded result. If the method call
 	/// failed, the `Result` value contains an error.
-	Done(Result<usize>),
+	Done(core::result::Result<usize, MethodCallError<'invoker>>),
 
 	/// The method call is complete but the provided buffer was too short to hold the result. The
 	/// [`MethodCall`](MethodCall) value is returned so the caller can retry with a larger buffer.
@@ -847,25 +1058,26 @@ pub enum InvokeEndResult<'invoker> {
 	Pending(MethodCall<'invoker>),
 }
 
-impl InvokeEndResult<'_> {
+impl<'invoker> InvokeEndResult<'invoker> {
 	/// Unwraps an `InvokeEndResult`, assuming that the caller already knows that the result is
 	/// `Done`. This function is useful if the caller knows that the method call is complete and
 	/// that the buffer is large enough to hold any possible return value, or if the caller is not
 	/// in a position to handle large return values anyway.
 	///
 	/// # Errors
-	/// * [`BufferTooShort`](Error::BufferTooShort) is returned if the result was actually
-	///   `BufferTooShort`.
-	/// * [`QueueEmpty`](Error::QueueEmpty) is returned if the result was actually `QueueEmpty`.
+	/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the result was
+	///   actually `BufferTooShort`.
+	/// * [`QueueEmpty`](MethodCallError::QueueEmpty) is returned if the result was actually
+	///   `QueueEmpty`.
 	///
 	/// In case of any error, because the [`MethodCall`](MethodCall) is consumed, the method call
 	/// is cancelled.
 	#[must_use = "This function is only useful for its return value"]
-	pub fn expect_done(self) -> Result<usize> {
+	pub fn expect_done(self) -> core::result::Result<usize, MethodCallError<'invoker>> {
 		match self {
 			Self::Done(result) => result,
-			Self::BufferTooShort(_) => Err(Error::BufferTooShort),
-			Self::Pending(_) => Err(Error::QueueEmpty),
+			Self::BufferTooShort(_) => Err(MethodCallError::BufferTooShort),
+			Self::Pending(_) => Err(MethodCallError::QueueEmpty),
 		}
 	}
 }
