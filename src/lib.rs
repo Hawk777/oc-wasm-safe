@@ -95,7 +95,7 @@ impl decode::Decode<'_> for Address {
 		if datatype == Type::Tag {
 			let tag = d.tag()?;
 			if tag != Tag::Unassigned(39) {
-				return Err(decode::Error::Message("expected tag 39"));
+				return Err(decode::Error::message("expected tag 39"));
 			}
 			datatype = d.datatype()?;
 		}
@@ -107,17 +107,17 @@ impl decode::Decode<'_> for Address {
 			Type::Bytes => {
 				let b = d.bytes()?;
 				Ok(Self::from_bytes(b.try_into().map_err(|_| {
-					decode::Error::Message("expected 16 bytes")
+					decode::Error::message("expected 16 bytes")
 				})?))
 			}
 			Type::String => {
 				let s = d.str()?;
 				Ok(
 					Self::from_str(s)
-						.map_err(|_| decode::Error::Message("expected UUID string"))?,
+						.map_err(|_| decode::Error::message("expected UUID string"))?,
 				)
 			}
-			_ => Err(decode::Error::Message("expected byte or UTF-8 string")),
+			_ => Err(decode::Error::message("expected byte or UTF-8 string")),
 		}
 	}
 }

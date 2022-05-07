@@ -246,7 +246,7 @@ impl<'b> Decode<'b> for Decoded {
 	fn decode(d: &mut Decoder<'b>) -> core::result::Result<Self, minicbor::decode::Error> {
 		let tag = d.tag()?;
 		if tag != Tag::Unassigned(IDENTIFIER) {
-			return Err(minicbor::decode::Error::Message("expected Identifier tag"));
+			return Err(minicbor::decode::Error::message("expected Identifier tag"));
 		}
 		Ok(Self(NonZeroU32::new(d.u32()? + 1).unwrap()))
 	}
