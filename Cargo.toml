@@ -15,11 +15,11 @@ default-features = false
 version = "^0.15"
 
 [dependencies.oc-wasm-sys]
-version = "^0.1"
+version = "^0.2"
 
 [dependencies.ordered-float]
 default-features = false
-version = "^2.5"
+version = "^3"
 
 [dependencies.uuid]
 default-features = false
