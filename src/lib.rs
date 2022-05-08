@@ -86,8 +86,6 @@ impl FromStr for Address {
 
 impl decode::Decode<'_> for Address {
 	fn decode(d: &mut decode::Decoder<'_>) -> Result<Self, decode::Error> {
-		use core::convert::TryInto;
-
 		// Check the datatype of the next item.
 		let mut datatype = d.datatype()?;
 

@@ -2,13 +2,12 @@
 name = "oc-wasm-safe"
 version = "0.1.1"
 authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2018"
+edition = "2021"
 description = "Safe but low-level wrappers around the OC-Wasm system call interface"
 repository = "https://gitlab.com/Hawk777/oc-wasm-safe"
 license = "GPL-3.0-only"
 keywords = ["minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
-resolver = "2"
 
 [dependencies.minicbor]
 default-features = false
