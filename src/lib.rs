@@ -8,7 +8,7 @@
 //! smaller code but less useful error messages.
 //!
 //! The `std` feature controls whether [`error::Error`](error::Error) implements
-//! [`std::error::Error`](std::error::Error), which it cannot do in a `no_std` environment.
+//! `std::error::Error`, which it cannot do in a `no_std` environment.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(
