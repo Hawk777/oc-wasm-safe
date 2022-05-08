@@ -23,7 +23,7 @@ version = "^3"
 
 [dependencies.uuid]
 default-features = false
-version = "^0.8"
+version = "^1"
 
 [features]
 default = ["panic", "std"]
