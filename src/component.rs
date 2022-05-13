@@ -796,6 +796,35 @@ impl<'invoker> MethodCall<'invoker> {
 	/// Returns the result of the method call as a CBOR-encoded data item, or an indication that
 	/// the call is not finished.
 	///
+	/// On success, the result is written into up to `len` bytes pointed to by `buffer`, and the
+	/// number of bytes written is returned. If the buffer is not large enough to hold the call
+	/// result, [`BufferTooShort`](InvokeEndResult::BufferTooShort) is returned, containing the
+	/// `MethodCall` object, allowing the caller to retry fetching the results with a larger
+	/// buffer, or call [`end_length`](MethodCall::end_length) to obtain the needed buffer size.
+	///
+	/// # Errors
+	/// * [`NoSuchComponent`](Error::NoSuchComponent) is returned if the method call failed because the
+	///   component does not exist or is inaccessible.
+	/// * [`NoSuchMethod`](Error::NoSuchMethod) is returned if the method call failed because the
+	///   method does not exist on the component.
+	/// * [`BadParameters`](Error::BadParameters) is returned if the parameters provided when
+	///   starting the call are not acceptable for the method.
+	/// * [`Other`](Error::Other) is returned if the method call failed.
+	///
+	/// # Safety
+	/// The caller must ensure that `len` bytes pointed to by `buffer` are writeable.
+	pub unsafe fn end_ptr(self, buffer: *mut u8, len: usize) -> InvokeEndResult<'invoker> {
+		let result = sys::invoke_end(buffer, len);
+		match MethodCallError::from_isize(PhantomData, result) {
+			Err(MethodCallError::BufferTooShort) => InvokeEndResult::BufferTooShort(self),
+			Err(MethodCallError::QueueEmpty) => InvokeEndResult::Pending(self),
+			other => InvokeEndResult::Done(other),
+		}
+	}
+
+	/// Returns the result of the method call as a CBOR-encoded data item, or an indication that
+	/// the call is not finished.
+	///
 	/// On success, the result is written into `buffer`, and the number of bytes written is
 	/// returned. If the buffer is not large enough to hold the call result,
 	/// [`BufferTooShort`](InvokeEndResult::BufferTooShort) is returned, containing the
