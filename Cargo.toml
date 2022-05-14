@@ -1,6 +1,6 @@
 [package]
 name = "oc-wasm-safe"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Christopher Head <chead@chead.ca>"]
 edition = "2021"
 description = "Safe but low-level wrappers around the OC-Wasm system call interface"
