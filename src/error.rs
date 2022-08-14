@@ -4,16 +4,40 @@ use core::fmt::{Display, Formatter};
 /// The errors that a system call can return.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Error {
+	/// A CBOR data item is invalid CBOR or encodes an unsupported type or value.
 	CborDecode,
+
+	/// A buffer provided for the syscall to write into is too short.
 	BufferTooShort,
+
+	/// A component UUID refers to a component that does not exist or cannot be accessed.
 	NoSuchComponent,
+
+	/// A method invocation refers to a method that does not exist.
 	NoSuchMethod,
+
+	/// The parameters are incorrect in a way that does not have a more specific error code.
 	BadParameters,
+
+	/// A queue is full.
 	QueueFull,
+
+	/// A queue is empty.
 	QueueEmpty,
+
+	/// A descriptor is negative or not open.
 	BadDescriptor,
+
+	/// There are too many open descriptors.
 	TooManyDescriptors,
+
+	/// The operation failed for an otherwise unspecified reason.
 	Other,
+
+	/// A system call returned an error code that does not correspond to any known value.
+	///
+	/// It is likely that OC-Wasm has been updated to a version which adds new error codes, and
+	/// OC-Wasm-Safe has not been updated to match.
 	Unknown,
 }
 
