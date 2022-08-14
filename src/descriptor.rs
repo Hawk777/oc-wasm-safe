@@ -146,10 +146,11 @@ impl Drop for Owned {
 	}
 }
 
-impl Encode for Owned {
+impl<Context> Encode<Context> for Owned {
 	fn encode<W: Write>(
 		&self,
 		e: &mut Encoder<W>,
+		_: &mut Context,
 	) -> core::result::Result<(), minicbor::encode::Error<W::Error>> {
 		cbor_encode(self.as_raw(), e)
 	}
@@ -191,10 +192,11 @@ impl Debug for Borrowed<'_> {
 	}
 }
 
-impl Encode for Borrowed<'_> {
+impl<Context> Encode<Context> for Borrowed<'_> {
 	fn encode<W: Write>(
 		&self,
 		e: &mut Encoder<W>,
+		_: &mut Context,
 	) -> core::result::Result<(), minicbor::encode::Error<W::Error>> {
 		cbor_encode(self.as_raw(), e)
 	}
@@ -242,8 +244,11 @@ impl Debug for Decoded {
 	}
 }
 
-impl<'b> Decode<'b> for Decoded {
-	fn decode(d: &mut Decoder<'b>) -> core::result::Result<Self, minicbor::decode::Error> {
+impl<'b, Context> Decode<'b, Context> for Decoded {
+	fn decode(
+		d: &mut Decoder<'b>,
+		_: &mut Context,
+	) -> core::result::Result<Self, minicbor::decode::Error> {
 		let tag = d.tag()?;
 		if tag != Tag::Unassigned(IDENTIFIER) {
 			return Err(minicbor::decode::Error::message("expected Identifier tag"));

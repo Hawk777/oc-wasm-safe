@@ -11,7 +11,7 @@ categories = ["games"]
 
 [dependencies.minicbor]
 default-features = false
-version = "^0.15"
+version = "^0.18"
 
 [dependencies.oc-wasm-sys]
 version = "^0.2"

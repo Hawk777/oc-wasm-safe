@@ -84,8 +84,8 @@ impl FromStr for Address {
 	}
 }
 
-impl decode::Decode<'_> for Address {
-	fn decode(d: &mut decode::Decoder<'_>) -> Result<Self, decode::Error> {
+impl<Context> decode::Decode<'_, Context> for Address {
+	fn decode(d: &mut decode::Decoder<'_>, _: &mut Context) -> Result<Self, decode::Error> {
 		// Check the datatype of the next item.
 		let mut datatype = d.datatype()?;
 
@@ -120,10 +120,11 @@ impl decode::Decode<'_> for Address {
 	}
 }
 
-impl encode::Encode for Address {
+impl<Context> encode::Encode<Context> for Address {
 	fn encode<W: encode::Write>(
 		&self,
 		e: &mut encode::Encoder<W>,
+		_: &mut Context,
 	) -> Result<(), encode::Error<W::Error>> {
 		e.tag(Tag::Unassigned(39))?.bytes(self.as_bytes())?;
 		Ok(())
