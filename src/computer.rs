@@ -287,3 +287,12 @@ pub fn error(error: &str) -> ! {
 	// pointer/length pair are null or invalid.
 	unsafe { sys::error(error.as_ptr(), error.len()) }
 }
+
+/// Sends a message to the debug log, if enabled.
+pub fn debug(message: &str) {
+	// SAFETY: debug permits a string pointer/length pair.
+	let result = unsafe { call_string(sys::debug, Some(message)) };
+	// Can’t fail because beep_pattern can only fail due to MemoryFault or StringDecode, and
+	// Error::from_i32 already treats those as unreachable.
+	result.unwrap_or_else(|_| panic_or_trap!("unreachable"));
+}
