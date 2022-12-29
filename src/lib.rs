@@ -40,6 +40,7 @@ pub mod computer;
 pub mod descriptor;
 pub mod error;
 pub mod execute;
+pub mod extref;
 
 use core::fmt::{Display, Formatter};
 use core::str::FromStr;
