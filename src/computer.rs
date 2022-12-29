@@ -2,11 +2,11 @@
 
 use super::error::{Error, Result};
 use super::helpers::{call_buffer, call_buffer_len, call_buffer_str, call_string};
+use super::Address;
 use crate::panic_or_trap;
 use core::num::{NonZeroU16, NonZeroUsize};
 use oc_wasm_sys::computer as sys;
 use ordered_float::NotNan;
-use uuid::Uuid;
 
 /// Returns the amount of world time the computer has been running, in seconds.
 #[must_use = "This function is only useful for its return value"]
@@ -31,25 +31,25 @@ pub fn world_time() -> u64 {
 
 /// Returns the computer’s own UUID address.
 #[must_use = "This function is only useful for its return value"]
-pub fn address() -> Uuid {
+pub fn address() -> Address {
 	// SAFETY: address permits a writeable buffer pointer and promises to always write a valid
 	// UUID. It can only fail due to MemoryFault, which, because we provide it with a valid buffer,
 	// is impossible.
 	let mut buffer = uuid::Bytes::default();
 	unsafe { sys::address(buffer.as_mut_ptr()) };
-	Uuid::from_bytes(buffer)
+	Address::from_bytes(buffer)
 }
 
 /// Returns the UUID address of a filesystem that lives until the computer shuts down and can
 /// beused to hold temporarily files.
 #[must_use = "This function is only useful for its return value"]
-pub fn tmpfs_address() -> Uuid {
+pub fn tmpfs_address() -> Address {
 	// SAFETY: tmpfs_address permits a writeable buffer pointer and promises to always write a
 	// valid UUID. It can only fail due to MemoryFault, which, because we provide it with a valid
 	// buffer, is impossible.
 	let mut buffer = uuid::Bytes::default();
 	unsafe { sys::tmpfs_address(buffer.as_mut_ptr()) };
-	Uuid::from_bytes(buffer)
+	Address::from_bytes(buffer)
 }
 
 /// Returns the amount, in bytes, of RAM installed in the computer.
