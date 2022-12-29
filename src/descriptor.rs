@@ -13,7 +13,7 @@ const IDENTIFIER: u64 = 39;
 
 /// CBOR-encodes an opaque value descriptor.
 ///
-/// This produces an integer with the Identifier (39) tag.
+/// This produces an integer with the Identifier tag.
 fn cbor_encode<W: Write>(
 	descriptor: u32,
 	e: &mut Encoder<W>,
@@ -58,7 +58,7 @@ pub trait IntoDescriptor {
 ///
 /// A value of this type encapsulates an opaque value descriptor. Cloning it duplicates the
 /// descriptor. Dropping it closes the descriptor. CBOR-encoding it yields an integer with the
-/// Identifier (39) tag.
+/// Identifier tag.
 #[derive(Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Owned(NonZeroU32);
 
@@ -160,9 +160,8 @@ impl<Context> Encode<Context> for Owned {
 ///
 /// A value of this type encapsulates an opaque value descriptor. Copying or cloning it produces a
 /// new object containing the same descriptor. Dropping it does nothing. CBOR-encoding it yields an
-/// integer with the Identifier (39) tag. While a value of this type exists, lifetime rules prevent
-/// the modification or dropping of the [`Owned`](Owned) value from which it borrowed its
-/// descriptor.
+/// integer with the Identifier tag. While a value of this type exists, lifetime rules prevent the
+/// modification or dropping of the [`Owned`](Owned) value from which it borrowed its descriptor.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Borrowed<'a>(NonZeroU32, PhantomData<&'a NonZeroU32>);
 
