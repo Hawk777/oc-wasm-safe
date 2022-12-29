@@ -1,3 +1,31 @@
+//! Types related to examining and calling methods on components attached to or installed in a
+//! computer.
+//!
+//! Some of the APIs in this module are independent and can be used standalone. Invoking methods,
+//! however, is more complicated, and must be done as follows:
+//!
+//! 1. Call [`Invoker::take`](Invoker::take) if not already done (this can only be done once at
+//!    program startup) to obtain an [`Invoker`](Invoker).
+//! 2. Call one of the methods on the [`Invoker`](Invoker) to start the component call. On success,
+//!    this returns an [`InvokeResult`](InvokeResult) indicating whether the call is complete or
+//!    not along with a [`MethodCall`](MethodCall) to use to fetch the result.
+//! 3. If necessary, wait until the call is complete by returning from `run`.
+//! 4. If necessary, call [`MethodCall::end_length`](MethodCall::end_length) to allocate a
+//!    sufficient buffer to hold the result.
+//! 5. Call one of the methods on [`MethodCall`](MethodCall) to fetch the result, which both fills
+//!    the provided buffer and also returns an [`InvokeEndResult`](InvokeEndResult).
+//! 6. If [`Done`](InvokeEndResult::Done) is returned with an `Ok` result, examine the result in
+//!    the buffer.
+//! 7. If [`Done`](InvokeEndResult::Done) is returned with an `Err` result, the
+//!    [`MethodCallError`](MethodCallError) can be examined to determine the reason for the
+//!    failure, including detailed exception information in the form of a
+//!    [`LastException`](LastException) object if applicable.
+//! 8. Another method call can only be started once the [`InvokeResult`](InvokeResult),
+//!    [`MethodCall`](MethodCall), [`InvokeEndResult`](InvokeEndResult), and
+//!    [`LastException`](LastException) have all been dropped. This is enforced by means of
+//!    lifetime bindings between those types and the [`Invoker`](Invoker), preventing the latter
+//!    from being reused too early.
+
 use super::descriptor::AsDescriptor;
 use super::error::{Error, Result};
 use super::helpers::{call_buffer_len, call_buffer_str, call_string};

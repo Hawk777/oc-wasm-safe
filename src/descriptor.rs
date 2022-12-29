@@ -1,3 +1,9 @@
+//! Descriptors which refer to opaque values such as open file handles.
+//!
+//! The types in this module provide RAII-style wrappers around integer descriptors, which in turn
+//! are used by OC-Wasm to represent opaque values (such as open file handles) that can be returned
+//! by component calls but cannot be represented as pure data in CBOR.
+
 use super::error::{Error, Result};
 use core::fmt::{Debug, Formatter};
 use core::marker::PhantomData;

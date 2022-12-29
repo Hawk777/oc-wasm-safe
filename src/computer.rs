@@ -1,3 +1,5 @@
+//! Miscellaneous APIs related to the computer itself.
+
 use super::error::{Error, Result};
 use super::helpers::{call_buffer, call_buffer_len, call_buffer_str, call_string};
 use crate::panic_or_trap;

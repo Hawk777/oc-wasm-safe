@@ -1,3 +1,5 @@
+//! Functions for loading and executing a new WASM binary.
+
 use super::error::{Error, Result};
 use oc_wasm_sys::execute as sys;
 
