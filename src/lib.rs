@@ -52,13 +52,16 @@ use uuid::Uuid;
 /// A component address.
 ///
 /// This is just a UUID. It supports `minicbor`. When encoding, it encodes as a byte string tagged
-/// with the Identifier (39) tag. When decoding, it decodes from an optional Identifier (39) tag
-/// followed by either a byte string or a UTF-8 string.
+/// with the Binary UUID tag. When decoding, it decodes from an optional Binary UUID (or
+/// Identifier, for backwards compatibility) tag followed by either a byte string or a UTF-8
+/// string.
 #[derive(Clone, Copy, Debug, Default, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Address(Uuid);
 
 impl Address {
+	const TAG: Tag = Tag::Unassigned(37);
+
 	#[must_use = "This function is only useful for its return value"]
 	pub const fn as_bytes(&self) -> &[u8; 16] {
 		self.0.as_bytes()
@@ -89,11 +92,12 @@ impl<Context> decode::Decode<'_, Context> for Address {
 		// Check the datatype of the next item.
 		let mut datatype = d.datatype()?;
 
-		// If it’s a tag, it must have value 39 (Identifier), and the tagged value is the UUID.
+		// If it’s a tag, it must have value Identifier (39) or Binary UUID, and the tagged value
+		// is the UUID.
 		if datatype == Type::Tag {
 			let tag = d.tag()?;
-			if tag != Tag::Unassigned(39) {
-				return Err(decode::Error::message("expected tag 39"));
+			if tag != Self::TAG && tag != Tag::Unassigned(39) {
+				return Err(decode::Error::message("expected tag Binary UUID"));
 			}
 			datatype = d.datatype()?;
 		}
@@ -126,7 +130,7 @@ impl<Context> encode::Encode<Context> for Address {
 		e: &mut encode::Encoder<W>,
 		_: &mut Context,
 	) -> Result<(), encode::Error<W::Error>> {
-		e.tag(Tag::Unassigned(39))?.bytes(self.as_bytes())?;
+		e.tag(Self::TAG)?.bytes(self.as_bytes())?;
 		Ok(())
 	}
 }
