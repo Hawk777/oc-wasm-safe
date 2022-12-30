@@ -4,7 +4,7 @@ use super::error::{Error, Result};
 use super::helpers::{call_buffer, call_buffer_len, call_buffer_str, call_string};
 use super::Address;
 use crate::panic_or_trap;
-use core::num::{NonZeroU16, NonZeroUsize};
+use core::num::NonZeroUsize;
 use oc_wasm_sys::computer as sys;
 use ordered_float::NotNan;
 
@@ -210,47 +210,12 @@ pub fn char_width(ch: char) -> u32 {
 	unsafe { sys::char_width(ch) }
 }
 
-/// A number that can be used as the frequency or duration of a single-tone beep.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct BeepParameter(NonZeroU16);
-
-impl BeepParameter {
-	/// Creates a `BeepParameter` if the provided value is between 1 and 32,767.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn new(value: u16) -> Option<Self> {
-		NonZeroU16::new(value).and_then(|v| {
-			if v.get() <= 32767 {
-				Some(Self(v))
-			} else {
-				None
-			}
-		})
-	}
-
-	/// Returns the contained value.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn get(self) -> u16 {
-		self.0.get()
-	}
-}
-
-impl From<BeepParameter> for u16 {
-	fn from(value: BeepParameter) -> Self {
-		value.0.get()
-	}
-}
-
-impl From<BeepParameter> for u32 {
-	fn from(value: BeepParameter) -> Self {
-		value.0.get().into()
-	}
-}
-
 /// Plays a beep.
 ///
 /// The `frequency` parameter is the frequency, in Hz, of the beep to play. The `duration`
-/// parameter is the length, in milliseconds, of the beep.
-pub fn beep(frequency: BeepParameter, duration: BeepParameter) {
+/// parameter is the length, in milliseconds, of the beep. Both parameters are clamped to a maximum
+/// value of 32,767.
+pub fn beep(frequency: u16, duration: u16) {
 	// SAFETY: beep is unconditionally safe.
 	unsafe { sys::beep(frequency.into(), duration.into()) }
 }
