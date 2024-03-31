@@ -12,7 +12,7 @@ use minicbor::data::Tag;
 use minicbor::encode::{Encode, Encoder, Write};
 
 /// The External Reference CBOR tag number.
-const EXTERNAL_REFERENCE: Tag = Tag::Unassigned(32769);
+const EXTERNAL_REFERENCE: Tag = Tag::new(32769);
 
 /// A reference to a byte array.
 pub struct Bytes<'a>(&'a [u8]);

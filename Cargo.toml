@@ -11,14 +11,14 @@ categories = ["games"]
 
 [dependencies.minicbor]
 default-features = false
-version = "^0.20"
+version = "^0.21"
 
 [dependencies.oc-wasm-sys]
 version = "^0.2.1"
 
 [dependencies.ordered-float]
 default-features = false
-version = "^3"
+version = "^4"
 
 [dependencies.uuid]
 default-features = false

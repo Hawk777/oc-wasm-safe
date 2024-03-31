@@ -61,7 +61,7 @@ use uuid::Uuid;
 pub struct Address(Uuid);
 
 impl Address {
-	const TAG: Tag = Tag::Unassigned(37);
+	const TAG: Tag = Tag::new(37);
 
 	#[must_use = "This function is only useful for its return value"]
 	pub const fn as_bytes(&self) -> &[u8; 16] {
@@ -97,7 +97,7 @@ impl<Context> decode::Decode<'_, Context> for Address {
 		// is the UUID.
 		if datatype == Type::Tag {
 			let tag = d.tag()?;
-			if tag != Self::TAG && tag != Tag::Unassigned(39) {
+			if tag != Self::TAG && tag != Tag::new(39) {
 				return Err(decode::Error::message("expected tag Binary UUID"));
 			}
 			datatype = d.datatype()?;

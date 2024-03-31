@@ -15,7 +15,7 @@ use minicbor::encode::{Encode, Encoder, Write};
 use oc_wasm_sys::descriptor as sys;
 
 /// The Identifier CBOR tag number.
-const IDENTIFIER: u64 = 39;
+const IDENTIFIER: Tag = Tag::new(39);
 
 /// CBOR-encodes an opaque value descriptor.
 ///
@@ -24,7 +24,7 @@ fn cbor_encode<W: Write>(
 	descriptor: u32,
 	e: &mut Encoder<W>,
 ) -> core::result::Result<(), minicbor::encode::Error<W::Error>> {
-	e.tag(Tag::Unassigned(IDENTIFIER))?.u32(descriptor)?;
+	e.tag(IDENTIFIER)?.u32(descriptor)?;
 	Ok(())
 }
 
@@ -255,7 +255,7 @@ impl<'b, Context> Decode<'b, Context> for Decoded {
 		_: &mut Context,
 	) -> core::result::Result<Self, minicbor::decode::Error> {
 		let tag = d.tag()?;
-		if tag != Tag::Unassigned(IDENTIFIER) {
+		if tag != IDENTIFIER {
 			return Err(minicbor::decode::Error::message("expected Identifier tag"));
 		}
 		Ok(Self(NonZeroU32::new(d.u32()? + 1).unwrap()))
