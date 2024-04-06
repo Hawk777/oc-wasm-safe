@@ -59,6 +59,13 @@ pub fn installed_ram() -> u32 {
 	unsafe { sys::installed_ram() }
 }
 
+/// Returns the amount, in bytes, of free RAM in the computer.
+#[must_use = "This function is only useful for its return value"]
+pub fn free_ram() -> u32 {
+	// SAFETY: free_ram is unconditionally safe.
+	unsafe { sys::free_ram() }
+}
+
 /// Pushes a signal to the signal queue.
 ///
 /// The `signal` parameter contains a CBOR-encoded array representing the signal, which must be a
